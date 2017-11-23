@@ -138,7 +138,7 @@ class Broker
         }
 
         try {
-            $socket = $this->getSocket($host, $port, $modeSync);
+            $socket = $this->getSocket($host, $port, $modeSync, $type);
             if (! $modeSync) {
                 $socket->setOnReadable($this->process);
             }
@@ -163,15 +163,15 @@ class Broker
         $this->brokers = [];
     }
 
-    public function getSocket($host, $port, $modeSync)
+    public function getSocket($host, $port, $modeSync, $identifier)
     {
         $saslProvider = $this->judgeConnectionConfig();
+
         if ($modeSync) {
-            $socket = new \Kafka\SocketSync($host, $port, $this->config, $saslProvider);
-        } else {
-            $socket = new \Kafka\Socket($host, $port, $this->config, $saslProvider);
+            return new \Kafka\SocketSync($host, $port, $identifier, $this->config, $saslProvider);
         }
-        return $socket;
+
+        return new \Kafka\Socket($host, $port, $identifier, $this->config);
     }
 
     private function judgeConnectionConfig() : ?SaslMechanism
@@ -188,7 +188,7 @@ class Broker
             Config::SECURITY_PROTOCOL_SASL_SSL,
             Config::SECURITY_PROTOCOL_SASL_PLAINTEXT
         ];
-        
+
         $securityProtocol = $this->config->getSecurityProtocol();
         if (in_array($securityProtocol, $plainConnections, true)) {
             $this->config->setSslEnable(false);

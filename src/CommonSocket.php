@@ -91,6 +91,11 @@ abstract class CommonSocket
     private $saslMechanismProvider = null;
 
     /**
+     * @var string
+     */
+    private $identifier;
+
+    /**
      * __construct
      *
      * @access public
@@ -98,10 +103,11 @@ abstract class CommonSocket
      * @param $port
      * @param Object $config
      */
-    public function __construct(string $host, int $port, ?Config $config = null, ?SaslMechanism $saslProvider = null)
+    public function __construct(string $host, int $port, string $identifier, ?Config $config = null, ?SaslMechanism $saslProvider = null)
     {
         $this->host                  = $host;
         $this->port                  = $port;
+        $this->identifier            = $identifier;
         $this->config                = $config;
         $this->saslMechanismProvider = $saslProvider;
     }
@@ -163,11 +169,11 @@ abstract class CommonSocket
             throw new \Kafka\Exception('Cannot open without port.');
         }
 
-        $remoteSocket = sprintf('tcp://%s:%s', $this->host, $this->port);
+        $remoteSocket = sprintf('tcp://%s:%s/%s', $this->host, $this->port, $this->identifier);
 
         $context = stream_context_create([]);
         if ($this->config != null && $this->config->getSslEnable()) { // ssl connection
-            $remoteSocket = sprintf('ssl://%s:%s', $this->host, $this->port);
+            $remoteSocket = sprintf('ssl://%s:%s/%s', $this->host, $this->port, $this->identifier);
             $localCert    = $this->config->getSslLocalCert();
             $localKey     = $this->config->getSslLocalPk();
             $verifyPeer   = $this->config->getSslVerifyPeer();
@@ -213,7 +219,7 @@ abstract class CommonSocket
             $errno,
             $errstr,
             $this->sendTimeoutSec + ($this->sendTimeoutUsec / 1000000),
-            STREAM_CLIENT_CONNECT,
+            STREAM_CLIENT_CONNECT  | STREAM_CLIENT_PERSISTENT,
             $context
         );
     }

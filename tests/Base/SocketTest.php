@@ -32,7 +32,7 @@ class SocketTest extends \PHPUnit\Framework\TestCase
      */
     public function testCreateStreamHostName()
     {
-        $socket = new Socket('', -99);
+        $socket = new Socket('', -99, 'testing');
         $socket->connect();
     }
 
@@ -46,7 +46,7 @@ class SocketTest extends \PHPUnit\Framework\TestCase
      */
     public function testCreateStreamPort()
     {
-        $socket = new Socket('123', -99);
+        $socket = new Socket('123', -99, 'testing');
         $socket->connect();
     }
 
@@ -116,7 +116,7 @@ class SocketTest extends \PHPUnit\Framework\TestCase
                 'cafile' => $cafile,
                 'peer_name' => $peerName
         ]]);
-        
+
 
         $streamMock = $this->initStreamStub($transport, $host, $port, true);
         $streamMock->expects($this->once())
@@ -441,10 +441,10 @@ class SocketTest extends \PHPUnit\Framework\TestCase
         } else {
             $mockMethod = array_merge(['createSocket'], $mockMethod);
         }
-        
+
         $socket = $this->getMockBuilder(Socket::class)
             ->setMethods($mockMethod)
-            ->setConstructorArgs([$host, $port, $config, $sasl])
+            ->setConstructorArgs([$host, $port, 'testing', $config, $sasl])
             ->getMock();
 
         $socket->method('createSocket')
@@ -456,7 +456,7 @@ class SocketTest extends \PHPUnit\Framework\TestCase
 
     private function initStreamStub($transport, $host, $port, $success = true)
     {
-        $uri = sprintf('%s://%s:%s', $transport, $host, $port);
+        $uri = sprintf('%s://%s:%s/testing', $transport, $host, $port);
         stream_wrapper_register($transport, SimpleStream::class);
         $streamMock = $this->createMock(Stream::class);
         $streamMock->method('open')->with(
@@ -480,7 +480,7 @@ class SocketTest extends \PHPUnit\Framework\TestCase
         return $socket;
     }
 
-    
+
     private function clearStreamMock()
     {
         if (in_array('ssl', stream_get_wrappers(), true)) {

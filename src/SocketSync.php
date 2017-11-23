@@ -14,7 +14,7 @@ class SocketSync extends CommonSocket
      */
     public static function createFromStream($stream)
     {
-        $socket = new self('localhost', 0);
+        $socket = new self('localhost', 0, 'testing');
         $socket->setStream($stream);
         return $socket;
     }
