@@ -14,6 +14,10 @@
 
 namespace KafkaTest;
 
+use Kafka\Broker;
+use Kafka\Socket;
+use Kafka\SocketSync;
+
 /**
 +------------------------------------------------------------------------------
 * Kafka protocol since Kafka v0.8
@@ -201,6 +205,73 @@ class BrokerTest extends \PHPUnit\Framework\TestCase
         $this->assertFalse($result);
         $result = $broker->getRandConnect();
         $this->assertSame($socket, $result);
+        $broker->clear();
+    }
+
+    public function testGetConnectSeparatesSyncAndAsyncSockets(): void
+    {
+        /** @var Broker|\PHPUnit_Framework_MockObject_MockObject $broker */
+        $broker = $this->createPartialMock(Broker::class, ['getSocket']);
+
+        $syncSocket = $this->createMock(SocketSync::class);
+        $broker->expects($this->at(0))
+               ->method('getSocket')
+               ->with('127.0.0.1', '9092', true, 'dataSockets')
+               ->willReturn($syncSocket);
+
+        $asyncSocket = $this->createMock(Socket::class);
+        $broker->expects($this->at(1))
+               ->method('getSocket')
+               ->with('127.0.0.1', '9092', false, 'dataSockets')
+               ->willReturn($asyncSocket);
+
+        $data = [
+            [
+                'host' => '127.0.0.1',
+                'port' => '9092',
+                'nodeId' => '0',
+            ],
+        ];
+        $broker->setData([], $data);
+        $broker->setProcess(function ($data) {
+        });
+
+        $actualSyncSocket = $broker->getConnect('127.0.0.1:9092', 'dataSockets', true);
+        self::assertSame($syncSocket, $actualSyncSocket);
+
+        $actualAsyncSocket = $broker->getConnect('127.0.0.1:9092', 'dataSockets', false);
+        self::assertSame($asyncSocket, $actualAsyncSocket);
+    }
+
+    public function testClosesDataAndMetaSockets(): void
+    {
+        $syncSocket = $this->createMock(SocketSync::class);
+        $syncSocket->expects($this->exactly(2))
+                   ->method('close');
+        $asyncSocket = $this->createMock(Socket::class);
+        $asyncSocket->expects($this->exactly(2))
+                    ->method('close');
+
+        /** @var Broker|\PHPUnit_Framework_MockObject_MockObject $broker */
+        $broker = $this->createPartialMock(Broker::class, ['getSocket']);
+        $broker->method('getSocket')
+               ->willReturnOnConsecutiveCalls($syncSocket, $asyncSocket, $syncSocket, $asyncSocket);
+
+        $data = [
+            [
+                'host' => '127.0.0.1',
+                'port' => '9092',
+                'nodeId' => '0',
+            ],
+        ];
+        $broker->setData([], $data);
+        $broker->setProcess(function ($data) {
+        });
+
+        $broker->getConnect('127.0.0.1:9092', 'dataSockets', true);
+        $broker->getConnect('127.0.0.1:9092', 'dataSockets', false);
+        $broker->getConnect('127.0.0.1:9092', 'metaSockets', true);
+        $broker->getConnect('127.0.0.1:9092', 'metaSockets', false);
         $broker->clear();
     }
 

@@ -161,14 +161,14 @@ class Broker
 
     public function getConnect($key, $type, $modeSync = false)
     {
-        if (isset($this->{$type}[$key])) {
-            return $this->{$type}[$key];
+        if (isset($this->{$type}[(int) $modeSync][$key])) {
+            return $this->{$type}[(int) $modeSync][$key];
         }
 
         if (isset($this->brokers[$key])) {
             $hostname = $this->brokers[$key];
-            if (isset($this->{$type}[$hostname])) {
-                return $this->{$type}[$hostname];
+            if (isset($this->{$type}[(int) $modeSync][$hostname])) {
+                return $this->{$type}[(int) $modeSync][$hostname];
             }
         }
 
@@ -193,7 +193,7 @@ class Broker
                 $socket->setOnReadable($this->process);
             }
             $socket->connect();
-            $this->{$type}[$key] = $socket;
+            $this->{$type}[(int) $modeSync][$key] = $socket;
 
             return $socket;
         } catch (\Exception $e) {
@@ -208,11 +208,14 @@ class Broker
 
     public function clear()
     {
-        foreach ($this->metaSockets as $key => $socket) {
+        $closeSocket = function($socket) {
             $socket->close();
+        };
+        foreach($this->metaSockets as $type => $sockets) {
+            array_walk($sockets, $closeSocket);
         }
-        foreach ($this->dataSockets as $key => $socket) {
-            $socket->close();
+        foreach ($this->dataSockets as $type => $sockets) {
+            array_walk($sockets, $closeSocket);
         }
         $this->brokers = [];
     }
